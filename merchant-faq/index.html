@@ -152,12 +152,11 @@ function statusClass(s){
 
 function esc(s){return s?s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"):"";}
 
-// ── 卡片数据 ──
-function updateCards(filtered){
-  const total=filtered.length;
-  const reuse=filtered.reduce((s,r)=>s+r.reuse,0);
-  const creators=[...new Set(filtered.map(r=>r.creator).filter(Boolean))];
-  const monthItems=filtered.filter(r=>{const d=(r.createTime||"").slice(0,7);return d===CUR_YEAR+"-"+CUR_MONTH;});
+// ── 卡片数据（始终基于全量数据，不受筛选影响）──
+function updateCards(){
+  const total=DATA.length;
+  const reuse=DATA.reduce((s,r)=>s+r.reuse,0);
+  const monthItems=DATA.filter(r=>{const d=(r.createTime||"").slice(0,7);return d===CUR_YEAR+"-"+CUR_MONTH;});
   const monthCount=monthItems.length;
   const monthCreators=[...new Set(monthItems.map(r=>r.creator).filter(Boolean))].length;
   const perCapita=monthCreators?((monthCount/monthCreators).toFixed(1)):0;
@@ -229,8 +228,8 @@ function applyFilter(){
     return true;
   });
 
-  // 卡片随筛选联动
-  updateCards(filtered);
+  // 卡片始终基于全量数据
+  updateCards();
   document.getElementById("filterResultCount").textContent="共 "+filtered.length+" 条";
 
   // 汇总页签：按创建人重新聚合
