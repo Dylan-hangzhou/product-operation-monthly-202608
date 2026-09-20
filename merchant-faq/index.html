@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商家小蜜FAQ汇总</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .tab-btn { padding: 10px 24px; font-size: 15px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: #6b7280; transition: all .2s; }
+  .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+  .tab-btn:hover { color: #2563eb; }
+  .filter-bar { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+  .filter-bar label { font-size: 13px; color: #475569; font-weight: 500; margin-right: 6px; }
+  .filter-bar select, .filter-bar input { font-size: 13px; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; }
+  .filter-bar select:focus, .filter-bar input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: #f1f5f9; color: #334155; font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+  .status-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .status-pass { background: #dcfce7; color: #166534; }
+  .status-review { background: #fef3c7; color: #92400e; }
+  .status-reject { background: #fee2e2; color: #991b1b; }
+  .status-draft { background: #f1f5f9; color: #475569; }
+  .status-online { background: #dbeafe; color: #1e40af; }
+  .status-offline { background: #f5f5f5; color: #737373; }
+  .link-title { color: #2563eb; text-decoration: none; word-break: break-all; }
+  .link-title:hover { text-decoration: underline; }
+  .num-cell { text-align: center; font-variant-numeric: tabular-nums; }
+  .summary-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; text-align: center; }
+  .summary-card .num { font-size: 28px; font-weight: 700; color: #1e293b; }
+  .summary-card .label { font-size: 13px; color: #64748b; margin-top: 4px; }
+  .creator-link { color: #2563eb; cursor: pointer; font-weight: 500; }
+  .creator-link:hover { text-decoration: underline; }
+  .reset-btn { font-size: 13px; padding: 6px 14px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #475569; }
+  .reset-btn:hover { background: #f1f5f9; }
+  .highlight-row { animation: highlightFade 2s ease-out; }
+  @keyframes highlightFade { 0% { background: #eff6ff; } 100% { background: transparent; } }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-6 py-8">
+  <h1 class="text-xl font-bold text-gray-800 mb-1">商家小蜜FAQ汇总</h1>
+  <p class="text-sm text-gray-400 mb-6">数据来源：Links FAQ知识库 &middot; 共 <span id="totalCount">0</span> 条 &middot; 生成时间 <span id="genTime"></span></p>
+
+  <!-- 顶部统计卡片 -->
+  <div class="grid grid-cols-3 gap-4 mb-6" id="summaryCards">
+    <div class="summary-card"><div class="num" id="cardTotal">0</div><div class="label">FAQ总数</div></div>
+    <div class="summary-card"><div class="num" id="cardReuse">0</div><div class="label">总复用次数</div></div>
+    <div class="summary-card"><div class="num" id="cardCreators">0</div><div class="label">创建人数</div></div>
+  </div>
+
+  <!-- Tab 切换 -->
+  <div class="flex border-b border-gray-200 mb-0">
+    <button class="tab-btn active" onclick="switchTab(0)">按创建人汇总</button>
+    <button class="tab-btn" onclick="switchTab(1)">FAQ明细</button>
+  </div>
+
+  <!-- 页签1：按创建人汇总 -->
+  <div id="tab0" class="bg-white rounded-b-lg border border-t-0 border-gray-200 p-5">
+    <table>
+      <thead><tr>
+        <th style="width:40px">#</th>
+        <th>创建人</th>
+        <th class="num-cell">FAQ数量</th>
+        <th class="num-cell">总复用次数</th>
+        <th style="width:100px">操作</th>
+      </tr></thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 页签2：FAQ明细 -->
+  <div id="tab1" class="bg-white rounded-b-lg border border-t-0 border-gray-200 p-5" style="display:none">
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <div class="flex flex-wrap items-end gap-4">
+        <div>
+          <label>创建人</label>
+          <select id="filterCreator" onchange="applyFilter()">
+            <option value="">全部</option>
+          </select>
+        </div>
+        <div>
+          <label>创建时间</label>
+          <input type="date" id="filterDateFrom" onchange="applyFilter()"> 
+          <span class="text-gray-400 mx-1">~</span>
+          <input type="date" id="filterDateTo" onchange="applyFilter()">
+        </div>
+        <div>
+          <label>知识点目录</label>
+          <select id="filterCategory" onchange="applyFilter()">
+            <option value="">全部</option>
+          </select>
+        </div>
+        <button class="reset-btn" onclick="resetFilter()">重置</button>
+        <span class="text-sm text-gray-400 ml-2" id="filterResultCount"></span>
+      </div>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:40px">#</th>
+        <th style="min-width:240px">FAQ标题</th>
+        <th>状态</th>
+        <th>创建人</th>
+        <th>知识点目录</th>
+        <th class="num-cell">复用次数</th>
+      </tr></thead>
+      <tbody id="detailBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const DATA = [{"title": "货主推单报错：请求失败:一品多行场景ERP明细行号:[orderLineNo]不同行之间有重复,重复的行号列表", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf98042713c904a4b67dd0", "status": "评审中", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 16:23:32", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 16:23:32", "faqType": "咨询", "category": "操作咨询 / 正向履约", "reuse": 0}, {"title": "入库预约产能&仓容如何配置？", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf9135b18675049ddfefe0", "status": "评审中", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 15:54:29", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 15:54:29", "faqType": "咨询", "category": "操作咨询", "reuse": 1}, {"title": "商家并未发起配拦截操作，系统为什么自动发起配拦截了呢？", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf910aaef79d049eccf8a9", "status": "PASS", "creator": "黄豪", "createTime": "2026-09-20 15:53:46", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 15:53:46", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "加工单下发报错：请求失败：加工单配比关系不正确：配比数不可为0", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf83a2a4ce18049f4ed28f", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 14:56:34", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 14:56:34", "faqType": "咨询", "category": "操作咨询 / 库内功能", "reuse": 0}, {"title": "销退单推单报错：请求失败:商家开启了原单校验,未查询到原单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf83994726bb04a33debcc", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 14:56:25", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 14:56:25", "faqType": "咨询", "category": "操作咨询 / 逆向履约", "reuse": 0}, {"title": "京东源头直发-通道配置", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf838670e4af049d545b3b", "status": "PASS", "creator": "唐伯文", "createTime": "2026-09-20 14:56:06", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 14:56:06", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "如何查看配送资源编码的快递品牌", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf8375592e3204a3ab1d7e", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 14:55:49", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 14:55:49", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "推单报错： 原因：\"请求失败:预占库存数量大于当前库存可用数量", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf82012fe95b04a2171d5f", "status": "评审中", "creator": "唐伯文", "createTime": "2026-09-20 14:49:37", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 14:49:37", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "退供出库单推单报错：请求失败:地址信息匹配失败", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf72dcae1b1e04a31057b0", "status": "PASS", "creator": "张杭萍", "createTime": "2026-09-20 13:45:00", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:45:00", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "CNBP拉单商家，如何判断订单需要在商家仓发货", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf729272cbe8049f40e6a8", "status": "PASS", "creator": "周玲玲", "createTime": "2026-09-20 13:43:46", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:43:46", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "出库单和入库单商家使用的是同一个ERP单号推送，但CNBP无法查询到", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf721a4726bb04a33ddf4f", "status": "PASS", "creator": "张杭萍", "createTime": "2026-09-20 13:41:46", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:41:46", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "订单取号报错：请检查收件人或发件人信息中的手机号或者座机信息格式是否正确", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf7202a43a8b04a0bbba01", "status": "PASS", "creator": "唐伯文", "createTime": "2026-09-20 13:41:22", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:41:22", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "搬仓后ERP无法指定快递推单/发货回传失败", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf7120e7364904baeeeb45", "status": "PASS", "creator": "赵烈幸", "createTime": "2026-09-20 13:37:36", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:37:36", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "商家工作台CNBP如何创建子账号/分配权限", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf70843e060004a2d7caae", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 13:35:00", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:35:00", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "无感搬仓虚实仓映射配置完成后新单推送未生效，仍是虚仓接单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf7054921bd304a03676c4", "status": "PASS", "creator": "赵烈幸", "createTime": "2026-09-20 13:34:12", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:34:12", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "盘点单回传报错：盘点编码XXXXX长度超过最大限制,回传失败!", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf701921e53604a55ed3d4", "status": "PASS", "creator": "周玲玲", "createTime": "2026-09-20 13:33:13", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:33:13", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "商家推送订单来源交易平台不是常见的平台缩写，导致订单取号报错", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf6fa507dcc8049e3d37c1", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 13:31:17", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:31:17", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "BY配资源配置订单切单包裹", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf6f9fc1ec2f04a40705a1", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 13:31:11", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:31:11", "faqType": "咨询", "category": "操作咨询 / 正向履约", "reuse": 0}, {"title": "CNBP报废单创建报错：报废单不支持报废", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf6ad13c18b004a236ea83", "status": "PASS", "creator": "张杭萍", "createTime": "2026-09-20 13:10:41", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:10:41", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "OMS运营工作台-库存对账管理发送库存报告报错", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf6a53d70a4704a152df03", "status": "PASS", "creator": "张杭萍", "createTime": "2026-09-20 13:08:35", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:08:35", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "ERP推送入库单报错： 请求失败:地址信息匹配失败", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf6a05e8485904a26f82ec", "status": "PASS", "creator": "张杭萍", "createTime": "2026-09-20 13:07:17", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:07:17", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "商家如何在CNBP查看订单SN出入库流水记录", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf69b20f1ab8049e47784b", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 13:05:54", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:05:54", "faqType": "咨询", "category": "操作咨询 / 正向履约", "reuse": 0}, {"title": "如何实现单品单件走原包装切箱，单品多件/多品多件走纸箱包材出库", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf69a43dafa104a2f9b8b3", "status": "PASS", "creator": "赵烈幸", "createTime": "2026-09-20 13:05:40", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:05:40", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "货品下发报错：请求失败:请求失败返回状态为:GOODS_EXISTS,货品条码【XXXXXX】已存在！", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aaf68e7cf3c4004a2450c7a", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-20 13:02:31", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-20 13:02:31", "faqType": "咨询", "category": "操作咨询", "reuse": 1}, {"title": "如何自助开通货主的商家工作台CNBP权限", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aacb5d6b2e88604a269f84b", "status": "PASS", "creator": "周玲玲", "createTime": "2026-09-18 11:53:58", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-18 11:53:58", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "CNBP拉单商家店铺授权报错：已存在店铺，无法授权新店铺，请先删除原有店铺", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aacb5418f83b504aa2dddf0", "status": "PASS", "creator": "裴玉", "createTime": "2026-09-18 11:51:29", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-18 11:51:29", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "钉群机器人如何配置仓内打包视频查询能力", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aacad671460450498d34937", "status": "PASS", "creator": "马浩楠", "createTime": "2026-09-18 11:17:59", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-18 11:17:59", "faqType": "咨询", "category": "操作咨询 / 服务和钉群", "reuse": 0}, {"title": "菜鸟CNBP支持哪些电商平台拉单？", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab79a1292f9b04a2bb93e7", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 13:24:49", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 13:24:49", "faqType": "咨询", "category": "操作咨询 / 接入CNAP", "reuse": 0}, {"title": "菜鸟能够对接的电商平台有哪些发货？-ERP推单商家", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab761cc0cc2404a308e684", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 13:09:48", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 13:09:48", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "老货主新增仓库如何快速做新品维护", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab606386540704a41317d4", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 11:37:07", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 11:37:07", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "商家广告页等DM单管理方案", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab6059ee0b7104a27839c1", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 11:36:57", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 11:36:57", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "CNBP授权店铺报错：域名暂时无法访问", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab5a31e4f34b04a2fe4fb2", "status": "PASS", "creator": "裴玉", "createTime": "2026-09-17 11:10:41", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 11:10:41", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "入库单「容器完成」分批回传ERP", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab5a09476e6e04a42e54c7", "status": "PASS", "creator": "黄豪", "createTime": "2026-09-17 11:10:01", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 11:10:01", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "一盘货商家大环系统新增货品未同步到中环系统", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab5953bd48db04a6a5c92a", "status": "PASS", "creator": "周玲玲", "createTime": "2026-09-17 11:06:59", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 11:06:59", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "销退单取消报错：请求失败:仓拦截失败，请找仓运营确认仓内作业是否可拦截，如果包裹已经出库建议发起配拦截。如需帮助，请在菜鸟服务群内反馈！", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab593613011c04a2f022eb", "status": "PASS", "creator": "裴玉", "createTime": "2026-09-17 11:06:30", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 11:06:30", "faqType": "咨询", "category": "操作咨询 / 逆向履约", "reuse": 0}, {"title": "M2C商家入库单打印箱唛报错", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab58d7583bb104a5daea73", "status": "PASS", "creator": "裴玉", "createTime": "2026-09-17 11:04:55", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 11:04:55", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "中环CNBP拉单商家订单审核失败，报错：当前线路不满足服务要求(标准件仓配服务),请联系您的小二进行线路配置后再操作", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab552733a1cb04a5f376fd", "status": "PASS", "creator": "周玲玲", "createTime": "2026-09-17 10:49:11", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 10:49:11", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "大宝账号如何添加新仓code权限", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab4fc1b2e88604a2d8fb8a", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 10:26:09", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 10:26:09", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "销退单取消报错：请求失败:销退入库单仓拦截失败，请找仓运营确认仓内作业是否可拦截,如需帮助，请在菜鸟服务群内反馈！", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab4f8750ce8e04a514dd3b", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 10:25:11", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 10:25:11", "faqType": "咨询", "category": "操作咨询 / 逆向履约", "reuse": 0}, {"title": "CNBP订单管理搜索框灰色无法输入", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab4f4759574e04a447e0f9", "status": "PASS", "creator": "唐伯文", "createTime": "2026-09-17 10:24:07", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 10:24:07", "faqType": "咨询", "category": "操作咨询 / 正向履约", "reuse": 0}, {"title": "CNBP拉单商家订单发货后回传平台报错：B143 无效的联系人#发件人为空", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab4a1daef79d04a0b2317c", "status": "PASS", "creator": "裴玉", "createTime": "2026-09-17 10:02:05", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 10:02:05", "faqType": "咨询", "category": "操作咨询 / 正向履约", "reuse": 0}, {"title": "高风险的货品属性如何申请变更", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab494e23206204a834375b", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 09:58:38", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 09:58:38", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "如何查看商家订单是否被HOLD单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab492daef79d04a0b230a7", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 09:58:05", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 09:58:05", "faqType": "咨询", "category": "操作咨询 / 正向履约", "reuse": 0}, {"title": "大环订单拦截成功和退回签收阶段，系统均未自动生成销退单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab47a231a77804a1a3ca4c", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-17 09:51:30", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 09:51:30", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "混环一盘货新链路划拨单，（淘到非淘）划拨单完成后，中环默认库存没有加上", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aab472845bc1504a3518d20", "status": "PASS", "creator": "黄豪", "createTime": "2026-09-17 09:49:28", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-17 09:49:28", "faqType": "咨询", "category": "操作咨询 / CNI出入库", "reuse": 0}, {"title": "鲨鱼菲特（物选）定制-发货清单打印模版不带价格", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aa9edd3bf4fa304a39d4abc", "status": "PASS", "creator": "裴玉", "createTime": "2026-09-16 09:16:03", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-16 09:16:03", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "ERP推单报错：请求失败:当前未订购服务(中通配服务)，请联系您的小二进行服务订购后再操作", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aa9e95e70e4af049e337602", "status": "PASS", "creator": "黄豪", "createTime": "2026-09-16 08:57:02", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-16 08:57:02", "faqType": "咨询", "category": "操作咨询 / 正向履约", "reuse": 0}, {"title": "中环商家推单指定配未生效", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aa9e642e3de0c04a045b596", "status": "PASS", "creator": "周玲玲", "createTime": "2026-09-16 08:43:46", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-16 08:43:46", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "大切中商家货品同步报错：请求失败返回状态为:TOP68,qimen route error", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aa2272db8652a04a6f881b3", "status": "PASS", "creator": "裴玉", "createTime": "2026-09-10 11:42:37", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-10 11:42:37", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "货品SN规则在哪可以查看？", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aa226aab448ee04979eb2d9", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-10 11:40:26", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-10 11:40:26", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "容器库存2B采集SN报错:序列号解析异常", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aa225a5b448ee04979eb22d", "status": "PASS", "creator": "黄豪", "createTime": "2026-09-10 11:36:05", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-10 11:36:05", "faqType": "咨询", "category": "操作咨询 / 库内功能", "reuse": 0}, {"title": "入库如何开启分批回传", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aa0c612bf4eab04a1b37357", "status": "PASS", "creator": "裴玉", "createTime": "2026-09-09 10:36:02", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-09 10:36:02", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "商家标准实施工作申请", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6aa0c5f7c5e8dc049b7ffec6", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-09 10:35:35", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-09 10:35:35", "faqType": "咨询", "category": "操作咨询", "reuse": 1}, {"title": "大环货主绑定淘系店铺报错：添加的店铺自身已经是货主身份，不能作为其他货主的子店铺", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6a9b7c73ee0b7104b6e78202", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-05 10:20:35", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-05 10:20:35", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "大环商家修改货品的禁收/禁售/预警天数被校验提示：临期预警需大于等于最小值48", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6a9b7c6da5709804a41889c2", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-05 10:20:29", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-05 10:20:29", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "商家CNBP上如何增加可选择的增值单类型", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6a9b7c657caeb204a47b5705", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-09-05 10:20:21", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-09-05 10:20:21", "faqType": "咨询", "category": "操作咨询 / 库内功能", "reuse": 1}, {"title": "CNBP权限申请", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6a02cfe357295a04b6719984", "status": "PASS", "creator": "唐伯文", "createTime": "2026-05-12 14:59:47", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-05-12 14:59:47", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "非新品条码更新报错：条码重复", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6a02cfdd4caab504afe08a47", "status": "PASS", "creator": "唐伯文", "createTime": "2026-05-12 14:59:41", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-05-12 14:59:41", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 1}, {"title": "退供出库推单报错：库存记录不存在", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69fe84836b916e04abd8bf60", "status": "PASS", "creator": "裴玉", "createTime": "2026-05-09 08:49:07", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-05-09 08:49:07", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "CNBP如何开启指定配功能", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69fe8470c86c3704b571d2be", "status": "PASS", "creator": "裴玉", "createTime": "2026-05-09 08:48:48", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-05-09 08:48:48", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "CNBP如何新增子店铺", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69fe8458a4385404b54d0174", "status": "PASS", "creator": "裴玉", "createTime": "2026-05-09 08:48:24", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-05-09 08:48:24", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "ERP对接模式如何开启自动销退配置", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69fc06c0fe88b304b51767f8", "status": "PASS", "creator": "裴玉", "createTime": "2026-05-07 11:28:00", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-05-07 11:28:00", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "【ASCP】商家合同查看路径", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69d8edbabde4fd04b63ef316", "status": "PASS", "creator": "杨宇轩", "createTime": "2026-04-10 20:31:54", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-04-10 20:31:54", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "菜鸟商家工作台CNBP右上角企业名称如何修改", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69d5af83b0f0b104f49537a4", "status": "PASS", "creator": "裴玉", "createTime": "2026-04-08 09:29:39", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-04-08 09:29:39", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "CNBP子账号收取不到短信/子账号无法加入企业", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69ce45c9c233e204d8be766a", "status": "PASS", "creator": "裴玉", "createTime": "2026-04-02 18:32:41", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-04-02 18:32:41", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "大环货主如何查看货品库存周转、滞销库存等分析报告", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69ce458e4febb104dd8373b4", "status": "PASS", "creator": "杨宇轩", "createTime": "2026-04-02 18:31:42", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-04-02 18:31:42", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "(ASCP)如何设置同一商品宝贝链接内多sku分开发货", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69ce44ddf0264b04c0a2b6a1", "status": "PASS", "creator": "杨宇轩", "createTime": "2026-04-02 18:28:45", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-04-02 18:28:45", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "商家拼多多店铺ID如何查看", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69ce3cceb2e88604b008acdd", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-04-02 17:54:22", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-04-02 17:54:22", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "菜鸟商家工作台CNBP如何开启SN管理", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69ce3b7da4ce1804b232d78b", "status": "PASS", "creator": "裴玉", "createTime": "2026-04-02 17:48:45", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-04-02 17:48:45", "faqType": "咨询", "category": "操作咨询", "reuse": 1}, {"title": "增值服务单创建报错：所选CP不支持此服务", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69ce39905923ad04f08a0d72", "status": "PASS", "creator": "裴玉", "createTime": "2026-04-02 17:40:32", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-04-02 17:40:32", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "入库推单报错：当前还未订购服务产品，请联系您的小二进行服务订购后再操作", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69a0f7417fbdfd04f98203ae", "status": "PASS", "creator": "王硕", "createTime": "2026-02-27 09:45:37", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-02-27 09:45:37", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "商家指定顺丰配置", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69a0f73026940704ff6abcb0", "status": "PASS", "creator": "王硕", "createTime": "2026-02-27 09:45:20", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-02-27 09:45:20", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "订单落配错误", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69a0f68b06679d05008b5587", "status": "PASS", "creator": "王硕", "createTime": "2026-02-27 09:42:35", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-02-27 09:42:35", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "入库单报错：  <message>请求失败:重试次数超限，请人工介入</message>", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69a0f64e73d6a204eb019e89", "status": "PASS", "creator": "王硕", "createTime": "2026-02-27 09:41:34", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-02-27 09:41:34", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "CNBP订单导出字段缺失", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69a0f6280f286c04f030bda1", "status": "PASS", "creator": "王硕", "createTime": "2026-02-27 09:40:56", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-02-27 09:40:56", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "【电子面单】小红书电子面单订购", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c27cf449e4104fa40c770", "status": "PASS", "creator": "王硕", "createTime": "2026-01-30 11:38:55", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:38:55", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "【电子面单】微信视频号电子面单订购", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c27c9e985bc04fe7c476c", "status": "PASS", "creator": "王硕", "createTime": "2026-01-30 11:38:49", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:38:49", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "【电子面单】抖音电子面单订购", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c27c3084fce04f0b4a45d", "status": "PASS", "creator": "王硕", "createTime": "2026-01-30 11:38:43", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:38:43", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "【电子面单】快手电子面单订购", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c27bdfd30e004f1273155", "status": "PASS", "creator": "王硕", "createTime": "2026-01-30 11:38:37", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:38:37", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "【电子面单】拼多多电子面单订购", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c27b1cb7fa904ff92cf89", "status": "PASS", "creator": "王硕", "createTime": "2026-01-30 11:38:25", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:38:25", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "【电子面单】京东无界电子面单订购", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c27abeb8fb304f856cd3a", "status": "PASS", "creator": "王硕", "createTime": "2026-01-30 11:38:19", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:38:19", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "【电子面单】得物电子面单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c27a0f9d7ab04fbac9761", "status": "PASS", "creator": "王硕", "createTime": "2026-01-30 11:38:08", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:38:08", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "【电子面单】唯品会JITX电子面单订购", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c279973d6a204fb64f73d", "status": "PASS", "creator": "王硕", "createTime": "2026-01-30 11:38:01", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:38:01", "faqType": "咨询", "category": "操作咨询", "reuse": 0}, {"title": "入库免预约的货主新仓入库提示要预约", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697c2793c3fe7405027b43a0", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-30 11:37:55", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-30 11:37:55", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "欠费停服hold单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697964ad3f643104fc56c0f9", "status": "PASS", "creator": "王硕", "createTime": "2026-01-28 09:21:49", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-28 09:21:49", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "入库建单报错：   当前还未订购服务产品，请联系您的小二进行服务订购后再操作", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697964973f643104fc56c0e9", "status": "PASS", "creator": "王硕", "createTime": "2026-01-28 09:21:27", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-28 09:21:27", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "得物直发订单，商家指定XNSF，实际落单ZTO", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6979647f7fbdfd04fc2a86dc", "status": "PASS", "creator": "王硕", "createTime": "2026-01-28 09:21:03", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-28 09:21:03", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "CNBP页面货品创建报错：java.lang.NullPointerExceptionlnull", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6979646c0fcf13050d6b8d0e", "status": "PASS", "creator": "王硕", "createTime": "2026-01-28 09:20:44", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-28 09:20:44", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "CNBP如何新增子店铺并授权拉单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6977660cc3fe7404f5061498", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 21:03:08", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 21:03:08", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 1}, {"title": "CNBP如何创建和维护自动审单策略", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69776605f32c5005049901b7", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 21:03:01", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 21:03:01", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "CNBP如何创建和维护快递策略", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697765ffb8b1fc04fae01eb0", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 21:02:55", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 21:02:55", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "CNBP如何创建和维护仓网策略", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697765fa0fcf13050d6a725f", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 21:02:50", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 21:02:50", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "CNBP如何进行销售商品和菜鸟货品的绑定", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697765f42d905b04efd5e251", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 21:02:44", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 21:02:44", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "CNBP如何创建和维护智能合单策略", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697765ef795b94050864635d", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 21:02:39", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 21:02:39", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "CNBP如何创建和维护智能拆单策略", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697765e953a80104ef49fc81", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 21:02:33", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 21:02:33", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "CNBP如何创建和维护赠品策略", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/697765e40ddb1e04f5a2adb9", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 21:02:28", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 21:02:28", "faqType": "咨询", "category": "操作咨询 / 基础功能", "reuse": 0}, {"title": "抖音订单取号成功，但面单打印报错：当前密钥无法解密该打印报文，请使用正确的店铺密钥打单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69775e080f286c04f59e7c01", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-26 20:28:56", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-26 20:28:56", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "商家推单没有联系人信息导致BP审核失败", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/6970464f06679d0504ee5f28", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-21 11:21:51", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-21 11:21:51", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "库存调整单回传报错：盘点编码XXX长度超过最大限制，回传失败", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69703b5c3f096404d5df6ae8", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-21 10:35:08", "reviewer": "墨岱(黄春生)", "reviewTime": "2026-01-21 10:35:08", "faqType": "咨询", "category": "常见问题FAQ", "reuse": 0}, {"title": "订单下发菜鸟后，仓库找不到订单，卡单", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69702fdec233e204dfa266ad", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-21 09:46:06", "reviewer": "轻侯(杨飞)", "reviewTime": "2026-01-21 09:46:06", "faqType": "咨询", "category": "已下线", "reuse": 1}, {"title": "搬仓FQA", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69702fa2e2255504de3f2c0d", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-21 09:45:06", "reviewer": "", "reviewTime": "2026-01-21 09:45:06", "faqType": "咨询", "category": "已下线", "reuse": 0}, {"title": "搬仓项目查看&编辑权限申请", "url": "https://links.alipay.com/room/638eb1e151a53d054334d9f5/snippet/69702f6e123c2504df78d5f7", "status": "PASS", "creator": "墨岱(黄春生)", "createTime": "2026-01-21 09:44:14", "reviewer": "", "reviewTime": "2026-01-21 09:44:14", "faqType": "咨询", "category": "已下线", "reuse": 0}];
+const SUMMARY = [{"creator": "墨岱(黄春生)", "count": 40, "reuse": 6}, {"creator": "王硕", "count": 17, "reuse": 0}, {"creator": "裴玉", "count": 16, "reuse": 1}, {"creator": "唐伯文", "count": 6, "reuse": 1}, {"creator": "周玲玲", "count": 6, "reuse": 0}, {"creator": "黄豪", "count": 5, "reuse": 0}, {"creator": "张杭萍", "count": 5, "reuse": 0}, {"creator": "赵烈幸", "count": 3, "reuse": 0}, {"creator": "杨宇轩", "count": 3, "reuse": 0}, {"creator": "马浩楠", "count": 1, "reuse": 0}];
+const DATE_MIN = "2026-01-21";
+const DATE_MAX = "2026-09-20";
+
+// 初始化
+document.getElementById("genTime").textContent = new Date().toLocaleString("zh-CN");
+document.getElementById("totalCount").textContent = DATA.length;
+document.getElementById("cardTotal").textContent = DATA.length;
+document.getElementById("cardReuse").textContent = DATA.reduce((s, r) => s + r.reuse, 0);
+document.getElementById("cardCreators").textContent = SUMMARY.length;
+
+// 状态样式映射
+function statusClass(s) {
+  if (s === "PASS" || s === "已发布" || s === "已上线") return "status-pass";
+  if (s === "评审中" || s === "UNDER_REVIEW") return "status-review";
+  if (s === "已驳回" || s === "REJECTED") return "status-reject";
+  if (s === "草稿" || s === "DRAFT") return "status-draft";
+  if (s === "ONLINE") return "status-online";
+  if (s === "OFFLINE") return "status-offline";
+  return "status-draft";
+}
+
+// 页签切换
+function switchTab(idx) {
+  document.querySelectorAll(".tab-btn").forEach((b, i) => b.classList.toggle("active", i === idx));
+  document.getElementById("tab0").style.display = idx === 0 ? "" : "none";
+  document.getElementById("tab1").style.display = idx === 1 ? "" : "none";
+}
+
+// 渲染汇总页签
+function renderSummary() {
+  const body = document.getElementById("summaryBody");
+  body.innerHTML = SUMMARY.map((s, i) => `
+    <tr>
+      <td class="text-gray-400">${i + 1}</td>
+      <td><span class="creator-link" onclick="goDetail('${s.creator.replace("'", "\\'")}')">${s.creator}</span></td>
+      <td class="num-cell">${s.count}</td>
+      <td class="num-cell">${s.reuse}</td>
+      <td><span class="creator-link" onclick="goDetail('${s.creator.replace("'", "\\'")}')">查看明细</span></td>
+    </tr>
+  `).join("");
+}
+
+// 从汇总页跳转到明细页并筛选
+function goDetail(creator) {
+  switchTab(1);
+  document.getElementById("filterCreator").value = creator;
+  applyFilter();
+}
+
+// 填筛选下拉
+function initFilters() {
+  const creatorSel = document.getElementById("filterCreator");
+  SUMMARY.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s.creator;
+    opt.textContent = `${s.creator} (${s.count})`;
+    creatorSel.appendChild(opt);
+  });
+  const catSel = document.getElementById("filterCategory");
+  const cats = [...new Set(DATA.map(r => r.category).filter(Boolean))].sort();
+  cats.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    catSel.appendChild(opt);
+  });
+  document.getElementById("filterDateFrom").min = DATE_MIN;
+  document.getElementById("filterDateFrom").max = DATE_MAX;
+  document.getElementById("filterDateTo").min = DATE_MIN;
+  document.getElementById("filterDateTo").max = DATE_MAX;
+}
+
+// 筛选并渲染明细
+function applyFilter() {
+  const creator = document.getElementById("filterCreator").value;
+  const dateFrom = document.getElementById("filterDateFrom").value;
+  const dateTo = document.getElementById("filterDateTo").value;
+  const category = document.getElementById("filterCategory").value;
+
+  let filtered = DATA.filter(r => {
+    if (creator && r.creator !== creator) return false;
+    if (category && r.category !== category) return false;
+    if (dateFrom || dateTo) {
+      const d = (r.createTime || "").slice(0, 10);
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo && d > dateTo) return false;
+    }
+    return true;
+  });
+
+  document.getElementById("filterResultCount").textContent = `共 ${filtered.length} 条`;
+  renderDetail(filtered);
+}
+
+function renderDetail(rows) {
+  const body = document.getElementById("detailBody");
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-8">无匹配数据</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td class="text-gray-400">${i + 1}</td>
+      <td>${r.url ? `<a class="link-title" href="${r.url}" target="_blank">${esc(r.title)}</a>` : esc(r.title)}</td>
+      <td><span class="status-tag ${statusClass(r.status)}">${esc(r.status)}</span></td>
+      <td>${esc(r.creator)}</td>
+      <td>${esc(r.category)}</td>
+      <td class="num-cell">${r.reuse}</td>
+    </tr>
+  `).join("");
+}
+
+function esc(s) {
+  if (!s) return "";
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function resetFilter() {
+  document.getElementById("filterCreator").value = "";
+  document.getElementById("filterDateFrom").value = "";
+  document.getElementById("filterDateTo").value = "";
+  document.getElementById("filterCategory").value = "";
+  applyFilter();
+}
+
+// 启动
+renderSummary();
+initFilters();
+applyFilter();
+</script>
+</body>
+</html>
